@@ -20,16 +20,27 @@ Real-time communication and collaboration platform targeting a native **Go + Wai
 
 ## Build and run
 
+### Desktop app (Wails v2 — shipping target)
+
+Requires [Go](https://go.dev/dl/), [Wails CLI](https://wails.io/docs/gettingstarted/installation), and WebView2 on Windows.
+
 ```powershell
 cd respond-v2
 go mod tidy
-go build -ldflags="-s -w" -o respond.exe ./cmd/respond
-.\respond.exe
+wails dev -m ./cmd/respond
+wails build -m ./cmd/respond   # Respond.exe in build/bin/
 ```
 
-Open [http://localhost:8080](http://localhost:8080). WebSocket endpoint: `ws://localhost:8080/ws`.
+The WebView loads `frontend/src/index.html`. The Go node (SQLite + SFU hub) starts on `:8080` in the background; the UI connects to `ws://127.0.0.1:8080/ws` as before.
 
-Or use `start.bat` (builds and opens the browser). **Shipping target is a Wails desktop app** — browser is prototype only. See **[ROADMAP.md](ROADMAP.md)**.
+### Headless node (browser prototype)
+
+```powershell
+go build -ldflags="-s -w" -o respond-node.exe ./cmd/respond-node
+.\respond-node.exe
+```
+
+Open [http://localhost:8080](http://localhost:8080). Or use `start.bat` (builds `respond-node.exe` and opens the browser). See **[ROADMAP.md](ROADMAP.md)**.
 
 Dev auth token format (first WS message): `dev:<userId>:<displayName>`.
 
@@ -49,12 +60,14 @@ Client (1× RTCPeerConnection) ──WebRTC──► Go SFU (1× PC per user)
 ## Project layout
 
 ```
-cmd/respond/     main.go, embedded client.html
+cmd/respond/       Wails desktop (main.go, app.go)
+cmd/respond-node/  Headless HTTP+WS server
+frontend/src/      index.html (UI for Wails + node)
+frontend/embed.go  //go:embed for Wails AssetServer
+internal/node/     HTTP mux, DB, hub startup
 internal/db/       SQLite persistence
-internal/ws/     WebSocket hub + SFU (ws.go, sfu.go)
+internal/ws/       WebSocket hub + SFU (ws.go, sfu.go)
 ```
-
-Wails binding will live beside `cmd/respond` (e.g. `app.go`) and call the same `Hub` / `SFU` types.
 
 ## Handoff for Cursor / contributors
 

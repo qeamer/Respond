@@ -1,0 +1,29 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Respond",
+  "outputfilename": "Respond",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "",
+  "wailsjsdir": "./frontend",
+  "version": "2",
+  "projectdir": ".",
+  "build:dir": "build",
+  "build:tags": "",
+  "build:ldflags": "-s -w",
+  "author": {
+    "name": "qeamer",
+    "email": ""
+  },
+  "info": {
+    "companyName": "Respond",
+    "productName": "Respond",
+    "productVersion": "0.21.0",
+    "copyright": "Copyright © 2026",
+    "comments": "Respond+ desktop voice node"
+  },
+  "nsisType": "multiple",
+  "obfuscated": false,
+  "garbleargs": ""
+}

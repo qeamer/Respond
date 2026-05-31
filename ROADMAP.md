@@ -15,7 +15,7 @@ Updated: May 31, 2026
 
 | Step | Work |
 |------|------|
-| B1 | `wails init` / bind `cmd/respond` — embed `client.html` in WebView |
+| B1 | ~~Wails scaffold~~ — `cmd/respond` + `frontend/src/index.html` + `wails.json` (done) |
 | B2 | System tray, single instance, auto-start node in-process (no separate port confusion) |
 | B3 | Native audio: WASAPI capture/playback or keep WebRTC in WebView with `wails://` origin |
 | B4 | Settings persist to `%AppData%/Respond/` |

@@ -1,8 +1,14 @@
 # Binaries
 *.exe
+*.exe~
+respond-node.exe
 *.dll
 *.so
 *.dylib
+
+# Wails
+build/
+frontend/wailsjs/
 
 # Build / runtime
 respond.db

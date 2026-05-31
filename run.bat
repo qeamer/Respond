@@ -24,8 +24,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [2/3] Bygger respond.exe...
-go build -ldflags="-s -w" -o respond.exe ./cmd/respond
+echo [2/3] Bygger respond-node.exe...
+go build -ldflags="-s -w" -o respond-node.exe ./cmd/respond-node
 if errorlevel 1 (
     echo [FEIL] Bygging feilet
     pause
@@ -37,4 +37,4 @@ echo.
 echo Apne nettleseren pa: http://localhost:8080
 echo Stopp med Ctrl+C
 echo.
-respond.exe
+respond-node.exe
