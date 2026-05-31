@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 
+	appfrontend "respond.app/node/frontend"
 	"respond.app/node/internal/node"
 )
 
@@ -31,6 +32,10 @@ func (a *App) startup(ctx context.Context) {
 	srv, err := node.New(node.Config{
 		Addr:   ":8080",
 		DBPath: dbPath,
+		// Same index.html as WebView — lets Firefox/Vivaldi join this node at http://localhost:8080
+		ServeUI: func() ([]byte, error) {
+			return appfrontend.Assets.ReadFile("src/index.html")
+		},
 	})
 	if err != nil {
 		slog.Error("node init failed", "err", err)
@@ -39,7 +44,9 @@ func (a *App) startup(ctx context.Context) {
 
 	a.node = srv
 	srv.Start()
-	slog.Info("Respond desktop ready", "ws", "ws://127.0.0.1:8080/ws")
+	slog.Info("Respond desktop ready",
+		"ws", "ws://127.0.0.1:8080/ws",
+		"browser", "http://127.0.0.1:8080")
 }
 
 func (a *App) shutdown(ctx context.Context) {

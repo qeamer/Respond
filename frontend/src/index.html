@@ -133,6 +133,9 @@ if(pttKeyMatch(e)&&!e.target.matches('input,select,textarea')){
 e.preventDefault();
 if(!pttDownRTC){
 pttDown=true;pttDownRTC=true;
+resumeAudio();
+applyMicGate(true,true);
+updateMeDot(true);
 if(!localStream)startMic();
 else if(audioCtxRTC&&audioCtxRTC.state==='suspended')audioCtxRTC.resume()}
 }
@@ -140,7 +143,7 @@ if(e.key==='m'&&!e.target.matches('input,select,textarea')){toggleMuteSelf()}
 if(e.key==='Escape'){closeCtx();_g('lightbox').classList.remove('open')}
 });
 _a('keyup',e=>{if(pttKeyMatch(e))releasePtt()});
-_a('blur',releasePtt);
+window.addEventListener('blur',releasePtt);
 document.addEventListener('visibilitychange',function(){if(document.hidden)releasePtt()});
 _a('click',e=>{if(!e.target.closest('.srv-wrap'))closeSrv();if(!e.target.closest('.ctx'))closeCtx()})}
 function setConnDot(live,highLat){
@@ -844,8 +847,8 @@ micGateOpen=open;
 var t=audioCtxRTC.currentTime;
 vaGainNode.gain.cancelScheduledValues(t);
 vaGainNode.gain.setValueAtTime(vaGainNode.gain.value,t);
-if(open){vaGainNode.gain.setTargetAtTime(1,t,useVA?0.004:0.003)}
-else{vaGainNode.gain.setTargetAtTime(0,t,0.03)}}
+if(open){vaGainNode.gain.setTargetAtTime(1,t,useVA?0.006:0.005)}
+else{vaGainNode.gain.setTargetAtTime(0,t,0.055)}}
 function isTransmitting(){return(useVA?vaSpeakingRTC:pttDownRTC)&&!micMuted}
 function applyOpusLive(){
 if(!rtcPC||rtcPC.connectionState!=='connected')return;
@@ -899,9 +902,13 @@ function closeRTC(){
 if(rtcPC){try{rtcPC.close()}catch(e){}rtcPC=null}
 if(window.respondClient&&respondClient.connected){
 respondClient.send('webrtc_hangup',{})}
-Object.keys(rtcRemoteAudio).forEach(function(uid){
-var a=rtcRemoteAudio[uid];if(a)a.remove();delete rtcRemoteAudio[uid]});
+Object.keys(rtcRemoteAudio).forEach(function(uid){removeRemotePlayback(uid)});
 rtcRemoteAnalysers={}}
+function removeRemotePlayback(uid){
+var r=rtcRemoteAudio[uid];
+if(r&&r.mode==='element'&&r.el){try{r.el.pause();r.el.remove()}catch(e){}}
+delete rtcRemoteAudio[uid];
+delete rtcRemoteAnalysers[uid]}
 function ensureRTC(){
 if(rtcPC)return Promise.resolve(rtcPC);
 rtcPC=new RTCPeerConnection(RTC_CONFIG);
@@ -912,11 +919,8 @@ if(uid===myUserId)return;
 if(localStream&&e.track){
 var mine=localStream.getAudioTracks();
 for(var i=0;i<mine.length;i++){if(mine[i].id===e.track.id)return}}
-var a=rtcRemoteAudio[uid];
-if(!a){a=_c('audio');a.id='rtc-audio-'+uid;a.autoplay=true;a.playsInline=true;a.setAttribute('playsinline','');document.body.appendChild(a);rtcRemoteAudio[uid]=a}
-a.srcObject=e.streams[0]||new MediaStream([e.track]);
-attachRemoteAnalyser(uid,a.srcObject);
-playRemoteAudio(a,uid)};
+var stream=e.streams[0]||new MediaStream([e.track]);
+attachRemotePlayback(uid,stream)};
 rtcPC.onicecandidate=function(e){
 if(e.candidate&&respondClient&&respondClient.connected){
 respondClient.send('webrtc_ice',{payload:e.candidate})}};
@@ -933,11 +937,28 @@ localStream.getAudioTracks().forEach(function(t){
 rtcPC.addTransceiver(t,{direction:'sendonly'})})}
 setOpusCodecPrefs(rtcPC);
 return Promise.resolve(rtcPC)}
-function playRemoteAudio(el,uid){
-if(!el||!el.play)return;
-el.play().then(function(){
-sysMsg('SFU lyd: '+uid)}).catch(function(){
-sysMsg('Klikk i vinduet for å aktivere lyd (nettleser)')})}
+function attachRemotePlayback(uid,stream){
+if(!stream||rtcRemoteAudio[uid])return;
+if(audioCtxRTC){
+try{
+if(audioCtxRTC.state==='suspended')audioCtxRTC.resume();
+var src=audioCtxRTC.createMediaStreamSource(stream);
+var an=audioCtxRTC.createAnalyser();
+an.fftSize=512;an.smoothingTimeConstant=0.35;
+src.connect(an);
+src.connect(audioCtxRTC.destination);
+rtcRemoteAnalysers[uid]={analyser:an,sm:0,hold:0};
+rtcRemoteAudio[uid]={mode:'webaudio'};
+startRemoteSpkLoop();
+sysMsg('SFU lyd: '+uid);
+return}catch(err){console.warn('remote webaudio',err)}}
+var a=_c('audio');
+a.id='rtc-audio-'+uid;a.autoplay=true;a.playsInline=true;a.setAttribute('playsinline','');
+document.body.appendChild(a);
+a.srcObject=stream;
+rtcRemoteAudio[uid]={mode:'element',el:a};
+a.play().then(function(){sysMsg('SFU lyd (fallback): '+uid)}).catch(function(){
+sysMsg('Klikk i vinduet for å aktivere lyd')})}
 function connectVoiceSFU(){
 if(!respondClient||!respondClient.connected)return;
 rtcEnqueue(function(){
@@ -987,20 +1008,8 @@ return rtcPC.addIceCandidate(new RTCIceCandidate(d.payload))})});
 respondClient.on('peer_left',function(d){
 if(!d||!d.user_id)return;
 var uid=d.user_id;
-var a=rtcRemoteAudio[uid];
-if(a){a.remove();delete rtcRemoteAudio[uid]}
-delete rtcRemoteAnalysers[uid];
+removeRemotePlayback(uid);
 setUserSpeaking(uid,false);});}
-function attachRemoteAnalyser(uid,stream){
-if(!stream||!audioCtxRTC)return;
-if(rtcRemoteAnalysers[uid])return;
-try{
-var an=audioCtxRTC.createAnalyser();
-an.fftSize=512;an.smoothingTimeConstant=0.35;
-var src=audioCtxRTC.createMediaStreamSource(stream);
-src.connect(an);
-rtcRemoteAnalysers[uid]={analyser:an,sm:0,hold:0};
-startRemoteSpkLoop()}catch(e){console.warn('remote analyser',e)}}
 function startRemoteSpkLoop(){
 if(remoteSpkLoopStarted)return;
 remoteSpkLoopStarted=true;
@@ -1026,7 +1035,7 @@ function resumeAudio(){
 if(audioCtxRTC&&audioCtxRTC.state==='suspended'){
 audioCtxRTC.resume().then(function(){sysMsg('Lydmotor aktiv')})}
 Object.keys(rtcRemoteAudio).forEach(function(uid){
-var a=rtcRemoteAudio[uid];if(a&&a.play)a.play().catch(function(){})});
+var r=rtcRemoteAudio[uid];if(r&&r.mode==='element'&&r.el&&r.el.play)r.el.play().catch(function(){})});
 document.removeEventListener('click',resumeAudio);
 document.removeEventListener('keydown',resumeAudio)}
 _a('click',resumeAudio);
@@ -1041,7 +1050,9 @@ var thr=_g('va-thresh-row');
 if(thr)thr.style.display=useVA?'block':'none';
 if(useVA){vaCalFrames=0;vaNoiseFloor=0.006;pttDown=false;pttDownRTC=false;micGateOpen=true;applyMicGate(false,true)}
 else{vaSpeakingRTC=false;pttDown=false;pttDownRTC=false;micGateOpen=true;applyMicGate(false,true);updateMeDot(false)}
-if(!quiet)sysMsg(useVA?'Voice Activation aktivert':'Push-to-Talk aktivert (hold ALT)');
+if(!quiet){
+sysMsg(useVA?'Voice Activation aktivert':'Push-to-Talk aktivert (hold '+((pttKey==='Alt'||pttKey==='alt')?'ALT':pttKey.toUpperCase())+')');
+if(!useVA&&/Firefox/i.test(navigator.userAgent))sysMsg('Firefox: bytt PTT-tast til V i innstillinger hvis Alt ikke sender lyd')}
 if(!localStream)startMic()}
 function saveSettings(){
 var va=_g('va-on')&&_g('va-on').checked;
