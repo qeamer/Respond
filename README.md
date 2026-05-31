@@ -27,11 +27,16 @@ Requires [Go](https://go.dev/dl/), [Wails CLI](https://wails.io/docs/gettingstar
 ```powershell
 cd respond-v2
 go mod tidy
-wails dev -m ./cmd/respond
-wails build -m ./cmd/respond   # Respond.exe in build/bin/
+wails dev
+wails build   # Respond.exe in build/bin/
 ```
 
 The WebView loads `frontend/src/index.html`. The Go node (SQLite + SFU hub) starts on `:8080` in the background; the UI connects to `ws://127.0.0.1:8080/ws` as before.
+
+If you see `open build\windows\icon.ico: The system cannot find the path specified`:
+
+1. Pull latest `wails.json` (must **not** contain `"projectdir": "."`).
+2. Ensure `build/windows/icon.ico` exists, or run `.\scripts\install-wails-build.ps1`.
 
 ### Headless node (browser prototype)
 
@@ -60,7 +65,7 @@ Client (1× RTCPeerConnection) ──WebRTC──► Go SFU (1× PC per user)
 ## Project layout
 
 ```
-cmd/respond/       Wails desktop (main.go, app.go)
+main.go, app.go    Wails desktop entry (must live at repo root)
 cmd/respond-node/  Headless HTTP+WS server
 frontend/src/      index.html (UI for Wails + node)
 frontend/embed.go  //go:embed for Wails AssetServer
