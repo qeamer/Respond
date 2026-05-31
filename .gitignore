@@ -1,0 +1,23 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build / runtime
+respond.db
+*.db-journal
+*.zip
+
+# Go
+/vendor/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
