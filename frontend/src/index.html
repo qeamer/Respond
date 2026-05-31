@@ -913,12 +913,12 @@ function ensureRTC(){
 if(rtcPC)return Promise.resolve(rtcPC);
 rtcPC=new RTCPeerConnection(RTC_CONFIG);
 rtcPC.ontrack=function(e){
-var uid=(e.streams&&e.streams[0]&&e.streams[0].id)||'';
-if(!isVoiceUserId(uid))return;
-if(uid===myUserId)return;
+var uid=remoteUidFromTrackEvent(e);
+if(!uid||uid===myUserId)return;
 if(localStream&&e.track){
 var mine=localStream.getAudioTracks();
 for(var i=0;i<mine.length;i++){if(mine[i].id===e.track.id)return}}
+ensureUserInList(uid);
 var stream=e.streams[0]||new MediaStream([e.track]);
 attachRemotePlayback(uid,stream)};
 rtcPC.onicecandidate=function(e){
@@ -929,14 +929,24 @@ var st=rtcPC&&rtcPC.connectionState;
 if(st==='connected'){
 var pr=getOpusPreset();
 applyOpusSendBitrate(rtcPC);
-sysMsg('Stemme tilkoblet (Opus '+Math.round(pr.maxBitrate/1000)+'k · '+pr.ptime+'ms)')}
+var senders=rtcPC.getSenders().filter(function(s){return s.track&&s.track.kind==='audio'});
+sysMsg('Stemme tilkoblet (Opus '+Math.round(pr.maxBitrate/1000)+'k · send='+senders.length+')')}
 if(st==='failed'){sysMsg('Stemme feilet — prøver på nytt...');setTimeout(function(){closeRTC();connectVoiceSFU()},1200)}};
+if(localStream&&localStream.getAudioTracks().length){
+rtcPC.addTrack(localStream.getAudioTracks()[0],localStream)}
 rtcPC.addTransceiver('audio',{direction:'recvonly'});
-if(localStream){
-localStream.getAudioTracks().forEach(function(t){
-rtcPC.addTransceiver(t,{direction:'sendonly'})})}
 setOpusCodecPrefs(rtcPC);
 return Promise.resolve(rtcPC)}
+function remoteUidFromTrackEvent(e){
+var uid='';
+if(e.streams&&e.streams[0]&&e.streams[0].id)uid=e.streams[0].id;
+if(!isVoiceUserId(uid)&&e.track&&e.track.id&&isVoiceUserId(e.track.id))uid=e.track.id;
+return uid}
+function ensureUserInList(uid){
+if(!uid||USERS.find(function(x){return x.id===uid}))return;
+USERS.push({id:uid,name:uid,role:'gjest',on:true,spk:false,muted:false,vol:100});
+uCh[uid]=uCh[uid]||curCh;
+renderUsers()}
 function attachRemotePlayback(uid,stream){
 if(!stream||rtcRemoteAudio[uid])return;
 if(audioCtxRTC){
@@ -967,6 +977,9 @@ if(st==='connected'||st==='connecting')return Promise.resolve();
 if(rtcPC){try{rtcPC.close()}catch(e){}rtcPC=null}
 return new Promise(function(resolve){
 startMic(function(){
+if(!localStream||!localStream.getAudioTracks().length){
+sysMsg('Mikrofon ikke klar — tillat mikrofon i nettleseren');
+resolve();return}
 ensureRTC().then(function(pc){
 return pc.createOffer({offerToReceiveAudio:true,iceRestart:false})})
 .then(function(o){

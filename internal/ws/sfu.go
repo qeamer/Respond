@@ -254,9 +254,10 @@ func (s *SFU) wireSubscriber(source, target *voiceMember) {
 		return
 	}
 
+	// Use userID as both track and stream id so all browsers map ontrack → u-* correctly.
 	track, err := webrtc.NewTrackLocalStaticRTP(
 		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus},
-		"audio",
+		source.userID,
 		source.userID,
 	)
 	if err != nil {
