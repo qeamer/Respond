@@ -1,12 +1,10 @@
 // Respond+ desktop — Wails v2 shell around the Go SFU node.
 //
 // Build (requires Wails CLI + WebView2):
+//   wails dev
 //   wails build
 //
-// Dev:
-//   wails dev
-//
-// Headless node (browser / API only):
+// Headless node (browser prototype):
 //   go run ./cmd/respond-node
 package main
 

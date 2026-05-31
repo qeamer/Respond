@@ -76,7 +76,7 @@ internal/ws/       WebSocket hub + SFU (ws.go, sfu.go)
 
 ## Handoff for Cursor / contributors
 
-See **[HANDOFF.md](HANDOFF.md)** for full architecture, terminology rules (no third-party platform names in repo), and integration points.
+See **[HANDOFF.md](HANDOFF.md)** for architecture and **[AI_HANDOFF.md](AI_HANDOFF.md)** for full changelog and file map (for Gemini/Claude/Cursor).
 
 ## Related repositories
 

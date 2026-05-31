@@ -6,8 +6,8 @@ respond-node.exe
 *.so
 *.dylib
 
-# Wails
-build/
+# Wails (keep build/windows icons; ignore compiled output)
+build/bin/
 frontend/wailsjs/
 
 # Build / runtime

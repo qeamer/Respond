@@ -31,9 +31,11 @@ Crucial to the competitive edge of Respond+ is our proprietary Voice Isolation t
 
 The project is transitioning from browser-based prototyping to a production-grade native architecture.
 
-* **Backend:** Standalone Go node on `localhost:8080` (SQLite, WebSocket `/ws`).
-* **Frontend:** `client.html` / embedded JS (Chat, Files, Tasks, Decisions, Plus Mode).
-* **Audio:** Legacy browser mesh P2P WebRTC is **removed**. Central **SFU** in Go is **implemented** (`internal/ws/sfu.go`).
+* **Desktop:** Wails v2 — `main.go` / `app.go` at repo root, UI in `frontend/src/index.html`, output `build/bin/Respond.exe`.
+* **Backend:** Go node on `:8080` (SQLite, WebSocket `/ws`) — started inside Wails `app.startup` or via `cmd/respond-node` for browser tests.
+* **Frontend:** Single-file `frontend/src/index.html` (Chat, Files, Tasks, Plus Mode).
+* **Audio:** Browser mesh P2P is **removed**. Central **SFU** in Go (`internal/ws/sfu.go`).
+* **Full AI changelog + file map:** see **[AI_HANDOFF.md](AI_HANDOFF.md)**.
 
 ## 4. THE ARCHITECTURAL SHIFT (CRITICAL FOR AI CONTEXT)
 
@@ -55,8 +57,10 @@ Client (1× PC) ──Opus/WebRTC──► Go SFU (1× PC per user) ──RTP fa
 |------|----------|
 | SFU core | `internal/ws/sfu.go` |
 | WS hub / signaling | `internal/ws/ws.go` |
-| Single client PC + Opus SDP | `cmd/respond/client.html` |
-| Wails bind point (future) | `cmd/respond/app.go` (not yet added) |
+| HTTP server | `internal/node/server.go` |
+| UI (WebView) | `frontend/src/index.html` |
+| Wails desktop | `main.go`, `app.go` |
+| Headless / browser | `cmd/respond-node/main.go` |
 
 Signaling events (server-only, no P2P relay): `webrtc_offer`, `webrtc_answer`, `webrtc_ice`, `webrtc_hangup`.
 
@@ -71,6 +75,6 @@ RTP forwarding uses `TrackLocalStaticRTP` (Opus passthrough, low latency) — no
 
 ## 7. NEXT STEPS
 
-1. Wails shell — bind existing `Hub` / `SFU` from `app.go`.
+1. Finish desktop login/WS (see `AI_HANDOFF.md` — `nodeHost()` fix); tray + installer.
 2. NoNoise — CGO filter on RTP payload in `fanoutLoop`.
 3. Optional — Whisper.cpp on the same Opus path.
