@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 title Respond Node
 
 cd /d "%~dp0"
@@ -10,18 +10,32 @@ echo   RESPOND NODE
 echo  =========================================
 echo.
 
-:: Kill any old respond.exe instance
+:: Stopp våre egne prosesser som kan holde :8080
 taskkill /F /IM respond-node.exe >nul 2>&1
-if not errorlevel 1 echo  [INFO] Stoppet gammel respond-node.exe
+if not errorlevel 1 echo  [INFO] Stoppet respond-node.exe
 taskkill /F /IM Respond.exe >nul 2>&1
+if not errorlevel 1 echo  [INFO] Stoppet Respond.exe (Wails desktop)
+timeout /t 2 /nobreak >nul
 
-:: Check port 8080 availability
-netstat -ano | findstr ":8080 " | findstr "LISTENING" >nul 2>&1
-if not errorlevel 1 (
-    echo  [ADVARSEL] Port 8080 er allerede i bruk av en annen prosess.
-    echo  Finn og stopp den, eller endre porten i main.go
-    netstat -ano | findstr ":8080 " | findstr "LISTENING"
+call :port_pid
+if defined PORT_PID (
+    call :kill_pid !PORT_PID!
+    timeout /t 1 /nobreak >nul
+)
+
+call :port_pid
+if defined PORT_PID (
+    echo  [ADVARSEL] Port 8080 er fortsatt i bruk ^(PID !PORT_PID!^).
+    call :proc_name !PORT_PID!
     echo.
+    echo  Hvis Respond desktop allerede kjører, trenger du IKKE start.bat.
+    echo  Åpne bare: http://localhost:8080
+    echo.
+    echo  Ellers: lukk prosessen over ^(Task Manager^) og kjør start.bat på nytt.
+    echo.
+    start "" "http://localhost:8080"
+    pause
+    exit /b 1
 )
 
 where go >nul 2>&1
@@ -40,6 +54,7 @@ echo  Adresse:  http://localhost:8080
 echo  Stopp:    Ctrl+C
 echo.
 echo  Desktop-app: wails dev  eller  wails build
+echo  ^(Ikke kjør start.bat samtidig som Respond.exe — begge bruker port 8080^)
 echo.
 echo  ---------------------------------------------
 echo  Apner klient: http://localhost:8080
@@ -47,10 +62,23 @@ echo  (IKKE localhost:3000 / file:// / 9090)
 echo.
 start "" "http://localhost:8080"
 
-:: Run with auto-restart on crash
 :loop
 respond-node.exe
 echo.
-echo  [INFO] Respond.exe stoppet. Restart om 3 sek (Ctrl+C for a avbryte)...
+echo  [INFO] respond-node stoppet. Restart om 3 sek ^(Ctrl+C for å avbryte^)...
 timeout /t 3 /nobreak >nul
 goto loop
+
+:port_pid
+set PORT_PID=
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8080 " ^| findstr "LISTENING"') do set PORT_PID=%%p
+exit /b 0
+
+:kill_pid
+taskkill /F /PID %1 >nul 2>&1
+if not errorlevel 1 echo  [INFO] Stoppet prosess PID %1 på port 8080
+exit /b 0
+
+:proc_name
+for /f "tokens=1" %%n in ('tasklist /FI "PID eq %1" /FO LIST ^| findstr /I "Image Name"') do echo  Prosess: %%n
+exit /b 0

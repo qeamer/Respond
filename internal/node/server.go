@@ -4,6 +4,7 @@ package node
 import (
 	"context"
 	"encoding/json"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -16,9 +17,10 @@ import (
 
 // Config configures the local node HTTP server.
 type Config struct {
-	Addr    string
-	DBPath  string
-	ServeUI func() ([]byte, error) // optional; nil = API + WS only (Wails desktop)
+	Addr      string
+	DBPath    string
+	ServeUI   func() ([]byte, error) // optional; nil = API + WS only (Wails desktop)
+	UIAssets  fs.FS                  // optional; embedded frontend/src for /assets/*
 }
 
 // Server wraps SQLite, the WS hub, and the HTTP listener.
@@ -67,7 +69,23 @@ func New(cfg Config) (*Server, error) {
 		})
 	}
 
+	if cfg.UIAssets != nil {
+		assetRoot, err := fs.Sub(cfg.UIAssets, "assets")
+		if err == nil {
+			mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(assetRoot))))
+		}
+	}
+
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		if cfg.UIAssets != nil {
+			data, err := fs.ReadFile(cfg.UIAssets, "assets/respond-logo.png")
+			if err == nil {
+				w.Header().Set("Content-Type", "image/png")
+				w.Header().Set("Cache-Control", "public, max-age=86400")
+				_, _ = w.Write(data)
+				return
+			}
+		}
 		w.WriteHeader(http.StatusNoContent)
 	})
 

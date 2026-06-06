@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io/fs"
 	"log/slog"
 	"os"
 
@@ -29,6 +30,12 @@ func (a *App) startup(ctx context.Context) {
 		dbPath = "respond.db"
 	}
 
+	uiAssets, err := fs.Sub(appfrontend.Assets, "src")
+	if err != nil {
+		slog.Error("frontend asset fs", "err", err)
+		return
+	}
+
 	srv, err := node.New(node.Config{
 		Addr:   ":8080",
 		DBPath: dbPath,
@@ -36,6 +43,7 @@ func (a *App) startup(ctx context.Context) {
 		ServeUI: func() ([]byte, error) {
 			return appfrontend.Assets.ReadFile("src/index.html")
 		},
+		UIAssets: uiAssets,
 	})
 	if err != nil {
 		slog.Error("node init failed", "err", err)

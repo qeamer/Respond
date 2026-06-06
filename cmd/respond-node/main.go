@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"flag"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -30,12 +31,19 @@ func main() {
 	abs, _ := filepath.Abs(*dbPath)
 	slog.Info("Respond Node starting", "addr", *addr, "db", abs)
 
+	uiAssets, err := fs.Sub(appfrontend.Assets, "src")
+	if err != nil {
+		slog.Error("frontend asset fs", "err", err)
+		os.Exit(1)
+	}
+
 	srv, err := node.New(node.Config{
 		Addr:   *addr,
 		DBPath: *dbPath,
 		ServeUI: func() ([]byte, error) {
 			return appfrontend.Assets.ReadFile("src/index.html")
 		},
+		UIAssets: uiAssets,
 	})
 	if err != nil {
 		slog.Error("node init failed", "err", err)

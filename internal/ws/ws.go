@@ -39,6 +39,7 @@ type Client struct {
 	Username  string
 	Role      string
 	ChannelID string
+	Speaking  bool
 	send      chan []byte
 }
 
@@ -56,12 +57,14 @@ type Hub struct {
 	mu      sync.RWMutex
 	clients map[string]*Client
 	sfu     *SFU
+	polls   *PollManager
 }
 
 func NewHub() *Hub {
 	return &Hub{
 		clients: make(map[string]*Client),
 		sfu:     newSFU(),
+		polls:   newPollManager(),
 	}
 }
 
@@ -73,20 +76,26 @@ func (h *Hub) ActiveCount() int {
 
 func (h *Hub) Register(c *Client) {
 	h.mu.Lock()
+	if old, ok := h.clients[c.UserID]; ok && old != c {
+		// Same user reconnected from a new tab — close the old session.
+		close(old.send)
+	}
 	h.clients[c.UserID] = c
 	h.mu.Unlock()
 	h.BroadcastPresence()
 }
 
-func (h *Hub) Unregister(userID string) {
+func (h *Hub) Unregister(userID string, c *Client) {
 	h.mu.Lock()
-	c, ok := h.clients[userID]
-	if ok {
+	cur, ok := h.clients[userID]
+	removed := ok && cur == c
+	if removed {
 		delete(h.clients, userID)
 		close(c.send)
 	}
 	h.mu.Unlock()
-	if ok {
+	if removed {
+		c.Speaking = false
 		h.BroadcastPresence()
 	}
 }
@@ -130,10 +139,11 @@ func (h *Hub) BroadcastPresence() {
 		ID        string `json:"id"`
 		Username  string `json:"username"`
 		ChannelID string `json:"channel_id"`
+		Speaking  bool   `json:"speaking"`
 	}
 	users := make([]p, 0, len(h.clients))
 	for _, c := range h.clients {
-		users = append(users, p{c.UserID, c.Username, c.ChannelID})
+		users = append(users, p{c.UserID, c.Username, c.ChannelID, c.Speaking})
 	}
 	clients := make([]*Client, 0, len(h.clients))
 	for _, c := range h.clients {
@@ -200,7 +210,7 @@ func Handler(hub *Hub, database *db.DB) http.HandlerFunc {
 			data, _ := json.Marshal(map[string]string{"user_id": c.UserID})
 			hub.BroadcastToChannel(c.ChannelID, c.UserID,
 				Envelope{Event: "peer_left", Data: data})
-			hub.Unregister(c.UserID)
+			hub.Unregister(c.UserID, c)
 			slog.Info("ws: disconnected", "user", c.UserID)
 		}()
 
@@ -243,8 +253,23 @@ func readPump(conn *websocket.Conn, c *Client, hub *Hub, database *db.DB) {
 			hub.sfu.HandleICE(c, env.Data)
 		case "webrtc_hangup":
 			hub.sfu.RemovePeer(c.UserID)
+		case "speaking_state":
+			handleSpeakingState(c, hub, env.Data)
+		case "poll_vote":
+			hub.handlePollVote(c, env.Data)
 		}
 	}
+}
+
+func handleSpeakingState(c *Client, hub *Hub, data json.RawMessage) {
+	var req struct {
+		Speaking bool `json:"speaking"`
+	}
+	if err := json.Unmarshal(data, &req); err != nil {
+		return
+	}
+	c.Speaking = req.Speaking
+	hub.BroadcastPresence()
 }
 
 func writePump(conn *websocket.Conn, c *Client) {
@@ -280,10 +305,12 @@ func handleJoin(c *Client, hub *Hub, database *db.DB, data json.RawMessage) {
 	}
 	if c.ChannelID != "" && c.ChannelID != req.ChannelID {
 		hub.sfu.OnChannelChange(c.UserID)
+		c.Speaking = false
 	}
 	c.ChannelID = req.ChannelID
 	hub.sfu.UpdateMemberChannel(c.UserID, req.ChannelID)
 	hub.BroadcastPresence()
+	hub.broadcastPollUpdate(req.ChannelID)
 	// Send last 50 messages
 	msgs, _ := database.RecentMessages(req.ChannelID, 50)
 	data2, _ := json.Marshal(map[string]any{"messages": msgs})
