@@ -27,3 +27,18 @@ Desktop.ini
 
 # Logs
 *.log
+
+# Local / scratch
+_t.js
+_find_out.txt
+_sanitize.js
+*.handoff.md
+AI_HANDOFF.md
+HANDOFF.md
+ROADMAP.md
+
+# Secrets
+.env
+.env.*
+*.pem
+*credentials*

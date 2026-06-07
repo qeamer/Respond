@@ -12,7 +12,7 @@
   "build:tags": "",
   "build:ldflags": "-s -w",
   "author": {
-    "name": "qeamer",
+    "name": "Respond",
     "email": ""
   },
   "info": {
