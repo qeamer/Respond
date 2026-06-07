@@ -1,4 +1,10 @@
+<p align="center">
+  <img src="frontend/src/assets/respond-logo.png" alt="Respond" width="160">
+</p>
+
 # Respond+ — Roadmap
+
+Lynrask teamkommunikasjon med tale, chat og filer på noden.
 
 Updated: May 31, 2026
 

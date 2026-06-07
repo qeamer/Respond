@@ -1,16 +1,21 @@
+<p align="center">
+  <img src="frontend/src/assets/respond-logo.png" alt="Respond" width="220">
+</p>
+
 # Respond+
+
+**Respond — lynrask teamkommunikasjon med tale, chat og filer på noden.**
 
 Real-time communication and collaboration platform targeting a native **Go + Wails** desktop app (Windows `.exe`) and later Android (`.apk`). Focus: ultra-low latency voice, secure tunneling, and proprietary **NoNoise** voice isolation.
 
-**Upstream:** [github.com/qeamer/Respond](https://github.com/qeamer/Respond.git)
-
+**Repo:** [github.com/qeamer/Respond](https://github.com/qeamer/Respond)
 ## Stack (this tree)
 
 | Layer | Technology |
 |-------|------------|
 | Backend | Go HTTP + WebSocket on `:8080`, SQLite (`modernc.org/sqlite`) |
 | Voice | Central **SFU** via [Pion WebRTC v4](https://github.com/pion/webrtc) — **Opus only**, no browser mesh P2P |
-| UI | Embedded `client.html` (`//go:embed`) — prototype shell for Wails WebView |
+| UI | `frontend/src/index.html` (`//go:embed`) — Wails WebView + browser node |
 | Future | NoNoise C++ SDK via CGO in RTP fan-out path; Whisper.cpp STT |
 
 ## Requirements

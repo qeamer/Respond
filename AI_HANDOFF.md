@@ -1,4 +1,10 @@
+<p align="center">
+  <img src="frontend/src/assets/respond-logo.png" alt="Respond" width="180">
+</p>
+
 # Respond+ — AI handoff (Gemini, Claude, Cursor)
+
+**Respond — lynrask teamkommunikasjon med tale, chat og filer på noden.**
 
 **Last updated:** 2026-05-31  
 **Repo:** https://github.com/qeamer/Respond.git  

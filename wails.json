@@ -18,9 +18,11 @@
   "info": {
     "companyName": "Respond",
     "productName": "Respond",
-    "productVersion": "0.21.0",
+    "productVersion": "0.32.0",
     "copyright": "Copyright © 2026",
-    "comments": "Respond — lynrask teamkommunikasjon med tale, chat og filer på noden."
+    "comments": "Respond — lynrask teamkommunikasjon med tale, chat og filer på noden.",
+    "fileDescription": "Respond — lynrask teamkommunikasjon med tale, chat og filer på noden.",
+    "productDescription": "Respond — lynrask teamkommunikasjon med tale, chat og filer på noden."
   },
   "nsisType": "multiple",
   "obfuscated": false,
