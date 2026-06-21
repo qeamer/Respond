@@ -179,7 +179,9 @@ func Handler(hub *Hub, database *db.DB) http.HandlerFunc {
 		conn.SetReadDeadline(time.Time{})
 
 		// Parse token: "dev:<userid>:<username>"
-		var h struct{ Token string `json:"token"` }
+		var h struct {
+			Token string `json:"token"`
+		}
 		json.Unmarshal(hello.Data, &h)
 
 		c := &Client{
@@ -299,7 +301,9 @@ func writePump(conn *websocket.Conn, c *Client) {
 }
 
 func handleJoin(c *Client, hub *Hub, database *db.DB, data json.RawMessage) {
-	var req struct{ ChannelID string `json:"channel_id"` }
+	var req struct {
+		ChannelID string `json:"channel_id"`
+	}
 	if json.Unmarshal(data, &req); req.ChannelID == "" {
 		return
 	}
@@ -323,21 +327,23 @@ func handleChat(c *Client, hub *Hub, database *db.DB, data json.RawMessage) {
 		Content   string `json:"content"`
 		MsgType   string `json:"type"`
 	}
-	if err := json.Unmarshal(data, &req); err != nil || req.Content == "" || req.ChannelID == "" {
+	if err := json.Unmarshal(data, &req); err != nil || req.Content == "" {
+		return
+	}
+	if c.ChannelID == "" {
 		return
 	}
 	if req.MsgType == "" {
 		req.MsgType = "chat"
 	}
-	database.InsertMessage(req.ChannelID, c.UserID, c.Username, req.Content, req.MsgType)
+	database.InsertMessage(c.ChannelID, c.UserID, c.Username, req.Content, req.MsgType)
 	out, _ := json.Marshal(map[string]any{
-		"channel_id": req.ChannelID,
+		"channel_id": c.ChannelID,
 		"user_id":    c.UserID,
 		"username":   c.Username,
 		"content":    req.Content,
 		"type":       req.MsgType,
 	})
-	hub.BroadcastToChannel(req.ChannelID, c.UserID,
+	hub.BroadcastToChannel(c.ChannelID, c.UserID,
 		Envelope{Event: "chat_message", Data: out})
 }
-
