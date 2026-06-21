@@ -338,7 +338,8 @@ else if(window.respondClient&&respondClient.connected){
 respondClient.send('chat_message',{channel_id:curCh,content:v,type:'chat'})}
 else{addChat(myUsername||'Meg',v)}}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function linkify(s){return s.replace(/https?:\/\/[^\s]+/g,u=>{const d=u.length>28?u.slice(0,26)+'…':u;return`<a href="${u}" target="_blank" rel="noopener">${d}</a>`})}
+function escAttr(s){return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function linkify(s){return s.replace(/https?:\/\/[^\s<>"']+/g,u=>{const d=u.length>28?u.slice(0,26)+'…':u;return`<a href="${escAttr(u)}" target="_blank" rel="noopener noreferrer">${esc(d)}</a>`})}
 function setActiveMb(m){
 const map={minus:'m',o:'o',plus:'p'};const key=map[m]||m;
 ['m','o','p'].forEach(k=>{
