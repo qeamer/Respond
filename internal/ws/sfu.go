@@ -32,13 +32,13 @@ type voiceMember struct {
 	client    *Client
 	pc        *webrtc.PeerConnection
 
-	mu            sync.Mutex
-	publishers    map[string]*publisherFwd // remote speakers playing on this client
-	uplink        *webrtc.TrackRemote
-	fanoutCancel  context.CancelFunc
-	fanoutTracks  map[string]*webrtc.TrackLocalStaticRTP // targetUserID -> track for fan-out writes
-	renegMu       sync.Mutex
-	renegTimer    *time.Timer
+	mu           sync.Mutex
+	publishers   map[string]*publisherFwd // remote speakers playing on this client
+	uplink       *webrtc.TrackRemote
+	fanoutCancel context.CancelFunc
+	fanoutTracks map[string]*webrtc.TrackLocalStaticRTP // targetUserID -> track for fan-out writes
+	renegMu      sync.Mutex
+	renegTimer   *time.Timer
 }
 
 type publisherFwd struct {
@@ -340,14 +340,15 @@ func cloneRTP(pkt *rtp.Packet) *rtp.Packet {
 	if pkt == nil {
 		return nil
 	}
-	raw, err := pkt.Marshal()
-	if err != nil {
-		return nil
+
+	// Pion's TrackLocalStaticRTP.WriteRTP may mutate Header.PayloadType.
+	// Each fan-out destination therefore needs its own Header, but the Opus
+	// payload itself is read-only and can be shared without copying.
+	dup := &rtp.Packet{
+		Header:  pkt.Header.Clone(),
+		Payload: pkt.Payload,
 	}
-	dup := &rtp.Packet{}
-	if err := dup.Unmarshal(raw); err != nil {
-		return nil
-	}
+
 	return dup
 }
 
